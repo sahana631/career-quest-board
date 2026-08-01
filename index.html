@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Career Quest Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e0c1a;
+    --bg-deep: #08070f;
+    --panel: #191531;
+    --panel-hi: #221d40;
+    --line: #322b57;
+    --text: #f1eeff;
+    --text-mute: #a79fcf;
+    --text-dim: #6f6795;
+    --violet: #8c7cff;
+    --violet-glow: #b5abff;
+    --reach: #ff5c7a;
+    --reach-dim: #4a2432;
+    --target: #ffc857;
+    --target-dim: #4a3c1e;
+    --safety: #5be3b3;
+    --safety-dim: #1f4438;
+    --pixel: 'Press Start 2P', monospace;
+    --mono: 'IBM Plex Mono', monospace;
+    --body: 'Space Grotesk', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+
+  /* starfield */
+  #stars{
+    position: fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 20px 30px, #ffffff55, transparent),
+      radial-gradient(1.5px 1.5px at 120px 90px, #ffffff33, transparent),
+      radial-gradient(1px 1px at 200px 40px, #ffffff44, transparent),
+      radial-gradient(1.5px 1.5px at 60px 160px, #ffffff33, transparent),
+      radial-gradient(1px 1px at 280px 200px, #ffffff55, transparent),
+      radial-gradient(1.5px 1.5px at 340px 60px, #ffffff33, transparent);
+    background-size: 380px 380px;
+    background-repeat: repeat;
+    opacity: 0.6;
+  }
+
+  .wrap{ position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 24px 100px; }
+
+  /* HERO */
+  .hero{ padding: 72px 0 40px; text-align:center; }
+  .hero-badge{
+    display:inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    color: var(--violet-glow); border: 1px solid var(--line); background: var(--panel);
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 28px; text-transform: uppercase;
+  }
+  .hero h1{
+    font-family: var(--pixel); font-size: clamp(22px, 4.6vw, 40px); line-height: 1.55;
+    margin: 0 0 20px; color: var(--text);
+    text-shadow: 0 0 18px rgba(140,124,255,0.45), 0 0 2px rgba(140,124,255,0.8);
+  }
+  .hero h1 span{ color: var(--violet-glow); }
+  .hero p{ font-size: 17px; color: var(--text-mute); max-width: 620px; margin: 0 auto 8px; line-height: 1.65; }
+  .hero p.small{ font-size: 14px; color: var(--text-dim); max-width: 560px; }
+
+  .baseline-card{
+    margin: 36px auto 0; max-width: 640px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px 24px; text-align: left;
+  }
+  .baseline-card .label{ font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--reach); text-transform: uppercase; margin-bottom: 8px; }
+  .baseline-card p{ margin: 0; font-size: 14px; color: var(--text-mute); line-height: 1.6; }
+  .baseline-card strong{ color: var(--text); }
+
+  /* CONTROLS */
+  .controls{
+    position: sticky; top: 12px; z-index: 5;
+    display:flex; flex-wrap: wrap; gap: 10px; align-items:center; justify-content: space-between;
+    background: rgba(25,21,49,0.9); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 48px 0 28px;
+  }
+  .search-box{ position: relative; flex: 1 1 240px; }
+  .search-box input{
+    width: 100%; background: var(--bg-deep); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--mono); font-size: 13px; padding: 11px 14px 11px 34px; border-radius: 10px; outline: none;
+  }
+  .search-box input:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(140,124,255,0.2); }
+  .search-box::before{
+    content: "⌕"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: 15px;
+  }
+  .seg{ display:flex; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button{
+    font-family: var(--mono); font-size: 12px; color: var(--text-mute); background: transparent;
+    border: none; padding: 8px 14px; border-radius: 7px; cursor: pointer; transition: all .15s ease;
+  }
+  .seg button.active{ background: var(--violet); color: #0e0c1a; font-weight: 600; }
+  .seg button:hover:not(.active){ color: var(--text); }
+  select.sortsel{
+    font-family: var(--mono); font-size: 12px; background: var(--bg-deep); color: var(--text-mute);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; outline: none; cursor: pointer;
+  }
+  .count-tag{ font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; padding: 0 4px; }
+
+  /* GRID */
+  .grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+  .card{
+    background: linear-gradient(160deg, var(--panel), var(--panel-hi));
+    border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+    cursor: pointer; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    display:flex; flex-direction:column; gap: 12px;
+  }
+  .card:hover{ transform: translateY(-3px); border-color: var(--violet); box-shadow: 0 10px 30px -12px rgba(140,124,255,0.5); }
+  .card:focus-visible{ outline: 2px solid var(--violet-glow); outline-offset: 3px; }
+
+  .card-top{ display:flex; justify-content: space-between; align-items:flex-start; gap: 10px; }
+  .cat-chip{
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  }
+  .cat-chip.tech{ background: rgba(140,124,255,0.18); color: var(--violet-glow); }
+  .cat-chip.nontech{ background: rgba(91,227,179,0.15); color: var(--safety); }
+
+  .card h3{ font-family: var(--body); font-weight: 700; font-size: 17px; margin: 0; line-height: 1.35; color: var(--text); }
+  .card .blurb{ font-size: 13.5px; color: var(--text-mute); line-height: 1.5; margin: 0; flex-grow: 1; }
+
+  .tier-dots{ display:flex; gap: 5px; align-items:center; }
+  .dot{ width: 8px; height: 8px; border-radius: 50%; }
+  .dot.R{ background: var(--reach); box-shadow: 0 0 6px var(--reach); }
+  .dot.T{ background: var(--target); box-shadow: 0 0 6px var(--target); }
+  .dot.S{ background: var(--safety); box-shadow: 0 0 6px var(--safety); }
+  .tier-label{ font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-left: 4px; }
+
+  .power-row{ display:flex; flex-direction:column; gap: 6px; }
+  .power-label{ display:flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .power-bar{ position: relative; height: 8px; background: var(--bg-deep); border-radius: 5px; overflow: visible; border: 1px solid var(--line); }
+  .power-fill{ height: 100%; border-radius: 5px; }
+  .power-baseline{
+    position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text);
+    left: 60%; opacity: 0.85;
+  }
+  .power-baseline::after{
+    content: "now"; position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 8px; color: var(--text-dim); white-space:nowrap;
+  }
+
+  .expand-hint{ font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align:center; padding-top: 4px; border-top: 1px dashed var(--line); }
+
+  /* MODAL */
+  .overlay{
+    position: fixed; inset:0; background: rgba(5,4,10,0.82); backdrop-filter: blur(4px);
+    display:flex; align-items:center; justify-content:center; z-index: 50; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  .overlay.open{ opacity: 1; pointer-events: all; }
+  .modal{
+    background: var(--panel-hi); border: 1px solid var(--violet); border-radius: 18px;
+    max-width: 720px; width: 100%; max-height: 86vh; overflow-y: auto; padding: 28px;
+    transform: translateY(16px) scale(0.98); transition: transform .22s ease;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(140,124,255,0.15);
+  }
+  .overlay.open .modal{ transform: translateY(0) scale(1); }
+  .modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap: 16px; margin-bottom: 6px; }
+  .modal-head h2{ font-family: var(--body); font-size: 22px; margin: 0; line-height:1.3; }
+  .close-btn{
+    font-family: var(--mono); background: var(--bg-deep); border: 1px solid var(--line); color: var(--text-mute);
+    width: 30px; height:30px; border-radius: 8px; cursor: pointer; flex-shrink:0; font-size: 14px;
+  }
+  .close-btn:hover{ color: var(--text); border-color: var(--violet); }
+  .modal-blurb{ color: var(--text-mute); font-size: 14px; margin: 10px 0 22px; line-height:1.6; }
+  .modal-blurb strong{ color: var(--text); }
+
+  .start-note{
+    font-size: 12.5px; color: var(--text-dim); background: var(--bg-deep); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 22px; line-height:1.6;
+  }
+  .start-note b{ color: var(--target); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .school-list{ display:flex; flex-direction:column; gap: 8px; }
+  .school-row{
+    display:flex; align-items:center; gap: 12px; background: var(--bg-deep); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 14px;
+  }
+  .tier-badge{
+    font-family: var(--mono); font-size: 10px; font-weight: 700; width: 24px; height:24px; flex-shrink:0;
+    border-radius: 6px; display:flex; align-items:center; justify-content:center;
+  }
+  .tier-badge.R{ background: var(--reach-dim); color: var(--reach); }
+  .tier-badge.T{ background: var(--target-dim); color: var(--target); }
+  .tier-badge.S{ background: var(--safety-dim); color: var(--safety); }
+  .school-name{ flex: 1; font-size: 13.5px; color: var(--text); }
+  .school-rate{ font-family: var(--mono); font-size: 12px; color: var(--text-mute); white-space:nowrap; }
+  .sourced{ color: var(--safety); }
+
+  .legend{
+    display:flex; flex-wrap:wrap; gap: 18px; justify-content:center; margin: 6px 0 6px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  }
+  .legend span{ display:flex; align-items:center; gap: 6px; }
+
+  footer{ text-align:center; margin-top: 60px; color: var(--text-dim); font-size: 12px; font-family: var(--mono); line-height: 1.8; }
+  footer .heart{ color: var(--reach); }
+
+  .empty-state{ text-align:center; padding: 60px 20px; color: var(--text-dim); font-family: var(--mono); font-size: 13px; grid-column: 1/-1; }
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="hero-badge">◆ 30 quests · 210 schools · 1 career pivot ◆</div>
+    <h1>Choose Your Career <span>Quest</span></h1>
+    <p>Every master's program you're considering, laid out like a quest board — pick a class, check the difficulty, see if it actually beats the boss fight you're already in.</p>
+    <p class="small">Click any card to see all 7 schools (2 reach · 3 target · 2 safety), acceptance rates, and start dates.</p>
+
+    <div class="baseline-card">
+      <div class="label">⚠ Current Boss Fight</div>
+      <p>Mid-level generalist SWE hiring right now: <strong>67-day time-to-hire</strong> in the Bay Area, laid-off senior engineers applying down a level, and demand concentrated hard in AI/ML (+163% YoY), security (+124% YoY), and cloud. Every power bar below is measured against <strong>this</strong> — the dotted line marked "now."</p>
+    </div>
+  </section>
+
+  <div class="legend">
+    <span><span class="dot R"></span> Reach</span>
+    <span><span class="dot T"></span> Target</span>
+    <span><span class="dot S"></span> Safety</span>
+    <span>✓ = sourced data &nbsp;·&nbsp; rest = estimates</span>
+  </div>
+
+  <div class="controls">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search quests... (e.g. 'cloud', 'MFA', 'finance')" />
+    </div>
+    <div class="seg" id="catSeg">
+      <button class="active" data-cat="all">All</button>
+      <button data-cat="tech">Tech</button>
+      <button data-cat="nontech">Non-Tech</button>
+    </div>
+    <select class="sortsel" id="sortSel">
+      <option value="easiest">Sort: Easiest job hunt first</option>
+      <option value="hardest">Sort: Hardest job hunt first</option>
+      <option value="az">Sort: A → Z</option>
+    </select>
+    <span class="count-tag" id="countTag">30 quests</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    ✦ Built from your real prep, your real market, and a lot of hope ✦<br>
+    Estimates are estimates — verify before you actually apply, ok? <span class="heart">♥</span>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+const PROGRAMS = [
+{id:1,cat:'tech',title:"MS Computer Science",blurb:"Same generalist grind, better alumni network.",ease:3,
+ schools:[
+  {n:"Carnegie Mellon (MSCS)",t:"R",r:"~7-12%",jan:false},
+  {n:"Stanford MSCS",t:"R",r:"~5-8%",jan:false},
+  {n:"University of Washington (Allen School)",t:"T",r:"~15%",jan:false},
+  {n:"Georgia Tech (on-campus MSCS)",t:"T",r:"~30%",jan:false},
+  {n:"UC San Diego",t:"T",r:"~20%",jan:false},
+  {n:"Georgia Tech OMSCS (online)",t:"S",r:"~80%+",jan:true},
+  {n:"Northeastern MSCS",t:"S",r:"~40%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 only at OMSCS (rolling) and Northeastern."},
+
+{id:2,cat:'tech',title:"MS Data Science",blurb:"A bit less crowded than pure SWE, still competitive.",ease:3,
+ schools:[
+  {n:"Stanford (ICME/Data Science)",t:"R",r:"~8-10%",jan:false},
+  {n:"Carnegie Mellon MCDS",t:"R",r:"~12%",jan:false},
+  {n:"UW MS Data Science",t:"T",r:"~20%",jan:false},
+  {n:"Columbia MS DS",t:"T",r:"~15%",jan:false},
+  {n:"University of Michigan MADS",t:"T",r:"~50%",jan:true},
+  {n:"Georgia Tech OMS Analytics",t:"S",r:"~60%+",jan:true},
+  {n:"UIUC MCS-DS (online)",t:"S",r:"~50%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Michigan MADS, GT OMS Analytics, UIUC — all online with multiple terms."},
+
+{id:3,cat:'tech',title:"MS Artificial Intelligence / ML",blurb:"The hottest ticket in tech hiring right now.",ease:5,
+ schools:[
+  {n:"Carnegie Mellon MSAI",t:"R",r:"~5-8%",jan:false},
+  {n:"Stanford MSCS (AI track)",t:"R",r:"~5-8%",jan:false},
+  {n:"UW MSCS (AI focus)",t:"T",r:"~15%",jan:false},
+  {n:"Georgia Tech MS AI (online)",t:"T",r:"~50%",jan:true},
+  {n:"UT Austin MSCSO (online)",t:"T",r:"~60%",jan:true},
+  {n:"Northeastern MS AI (Seattle)",t:"S",r:"~35%",jan:true},
+  {n:"CU Boulder MS CS, AI (online)",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at GT online, UT Austin online, Northeastern, CU Boulder online."},
+
+{id:4,cat:'tech',title:"MS Cybersecurity",blurb:"Demand is up 124% YoY — genuinely easier.",ease:5,
+ schools:[
+  {n:"Carnegie Mellon MS Info Security",t:"R",r:"~20%",jan:false},
+  {n:"Johns Hopkins MS Cybersecurity",t:"R",r:"~25%",jan:false},
+  {n:"UW MS Cybersecurity & Leadership",t:"T",r:"~40%",jan:true},
+  {n:"Georgia Tech MS Cybersecurity",t:"T",r:"~30%",jan:true},
+  {n:"NYU MS Cybersecurity",t:"T",r:"~25%",jan:false},
+  {n:"SANS Technology Institute",t:"S",r:"~70%+",jan:true},
+  {n:"University of Maryland (online)",t:"S",r:"~50%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at UW pro track, GT online, SANS (rolling), Maryland online."},
+
+{id:5,cat:'tech',title:"MS Human-Computer Interaction",blurb:"Design roles took cuts too — no free lunch here.",ease:2,
+ schools:[
+  {n:"Carnegie Mellon HCII",t:"R",r:"~9-10%",jan:false},
+  {n:"UW MHCI+D",t:"R",r:"~15-20%",jan:false},
+  {n:"Georgia Tech MS-HCI",t:"T",r:"~20%",jan:false},
+  {n:"University of Michigan MSI (HCI)",t:"T",r:"~30%",jan:false},
+  {n:"University of Maryland HCIM",t:"T",r:"~35%",jan:false},
+  {n:"DePaul MS-HCI",t:"S",r:"~60%",jan:true},
+  {n:"Iowa State HCI",t:"S",r:"~50%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 possibly at DePaul (quarter system) and Iowa State — verify."},
+
+{id:6,cat:'tech',title:"MS Information Systems / IT Mgmt",blurb:"PM-adjacent roles are getting cut right now.",ease:2,
+ schools:[
+  {n:"Carnegie Mellon MISM",t:"R",r:"~20%",jan:true},
+  {n:"UPenn MCIT",t:"R",r:"~15%",jan:false},
+  {n:"Georgetown MPS Tech Mgmt",t:"T",r:"~40%",jan:true},
+  {n:"UW MS Information Management",t:"T",r:"~30%",jan:false},
+  {n:"NYU MS Mgmt of Technology",t:"T",r:"~35%",jan:false},
+  {n:"Northeastern MS Info Systems",t:"S",r:"~50%",jan:true},
+  {n:"Drexel MS Information Systems",t:"S",r:"~60%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 CONFIRMED at CMU Heinz ✓, plus Georgetown, Northeastern, Drexel."},
+
+{id:7,cat:'tech',title:"Professional MEng in CS",blurb:"Same market, but built-in recruiting pipelines help.",ease:3,
+ schools:[
+  {n:"Cornell Tech MEng CS",t:"R",r:"~20%",jan:false},
+  {n:"Columbia MS CS (non-thesis)",t:"R",r:"~15%",jan:false},
+  {n:"UC Berkeley MEng",t:"T",r:"~25%",jan:false},
+  {n:"Georgia Tech MEng",t:"T",r:"~35%",jan:false},
+  {n:"UMass Amherst MSCS",t:"T",r:"~30%",jan:false},
+  {n:"SJSU MS Software Engineering",t:"S",r:"~50%",jan:true},
+  {n:"Santa Clara MSCS",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at SJSU (CSU system) and Santa Clara."},
+
+{id:8,cat:'tech',title:"MS Robotics",blurb:"Smaller pool of competitors, smaller pool of jobs.",ease:4,
+ schools:[
+  {n:"Carnegie Mellon Robotics Institute",t:"R",r:"~9-12%",jan:false},
+  {n:"UPenn GRASP Lab MSE Robotics",t:"R",r:"~15%",jan:false},
+  {n:"UW Robotics",t:"T",r:"~20%",jan:false},
+  {n:"Georgia Tech MS Robotics",t:"T",r:"~25%",jan:false},
+  {n:"University of Michigan Robotics",t:"T",r:"~20%",jan:false},
+  {n:"Northeastern MS Robotics",t:"S",r:"~40%",jan:true},
+  {n:"WPI MS Robotics",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 possibly at Northeastern and WPI — verify current cycle."},
+
+{id:9,cat:'tech',title:"MS/MEng Product Management",blurb:"PM hiring is brutal and relationship-driven.",ease:2,
+ schools:[
+  {n:"Duke MEng: Tech Product Mgmt",t:"R",r:"~30%",jan:false},
+  {n:"Cornell Tech (Product-adjacent)",t:"R",r:"~20%",jan:false},
+  {n:"CMU MS Software Management",t:"T",r:"~25%",jan:true},
+  {n:"UC Berkeley MEng (PM concentration)",t:"T",r:"~25%",jan:false},
+  {n:"Northwestern MS Tech & PM",t:"T",r:"~30%",jan:false},
+  {n:"Northeastern MS Eng Management",t:"S",r:"~50%",jan:true},
+  {n:"UW MS Technology Management",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at CMU (Heinz Spring pattern), plus Northeastern and UW pro track."},
+
+{id:10,cat:'tech',title:"MS Health Informatics",blurb:"Healthcare IT budgets don't swing with tech cycles.",ease:4,
+ schools:[
+  {n:"Johns Hopkins MS Health Informatics",t:"R",r:"~25-30%",jan:false},
+  {n:"Stanford Biomedical Data Science",t:"R",r:"~15%",jan:false},
+  {n:"UW MHIHIM",t:"T",r:"~40%",jan:false},
+  {n:"Columbia MS Biomedical Informatics",t:"T",r:"~20%",jan:false},
+  {n:"Northwestern MS Health Informatics",t:"T",r:"~35%",jan:true},
+  {n:"OHSU MS Health Informatics",t:"S",r:"~50%",jan:false},
+  {n:"UIC MS Health Informatics",t:"S",r:"~60%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at JHU part-time track, Northwestern, UIC online."},
+
+{id:11,cat:'tech',title:"MS Computational Biology / Bioinformatics",blurb:"Needs real domain catch-up first.",ease:3,
+ schools:[
+  {n:"Stanford Biomedical Informatics",t:"R",r:"~10%",jan:false},
+  {n:"MIT Computational Biology",t:"R",r:"~10%",jan:false},
+  {n:"UW Genome Sciences/Bioinformatics",t:"T",r:"~20%",jan:false},
+  {n:"Carnegie Mellon Comp Biology",t:"T",r:"~15%",jan:false},
+  {n:"Georgia Tech Bioinformatics",t:"T",r:"~30%",jan:false},
+  {n:"Boston University MS Bioinformatics",t:"S",r:"~40%",jan:true},
+  {n:"Johns Hopkins MS Bioinformatics (online)",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at BU and JHU's online options."},
+
+{id:12,cat:'tech',title:"MS Financial Engineering / Quant Finance",blurb:"Top schools report 95-99% placement. Steep tuition though.",ease:5,
+ schools:[
+  {n:"Columbia MS Financial Engineering",t:"R",r:"8% ✓",jan:false,sourced:true},
+  {n:"Princeton MFin",t:"R",r:"~10%",jan:false},
+  {n:"CMU MS Computational Finance",t:"T",r:"~15-20%",jan:false},
+  {n:"NYU MS Financial Engineering",t:"T",r:"~20%",jan:false},
+  {n:"UC Berkeley MFE",t:"T",r:"~10-12%",jan:false},
+  {n:"Rutgers MS Quantitative Finance",t:"S",r:"~30%",jan:true},
+  {n:"Baruch College MFE (CUNY)",t:"S",r:"~40%",jan:true}],
+ start:"Sept 2027 for Columbia/Princeton/CMU/NYU/Rutgers/Baruch. Berkeley MFE is the oddball — starts late March. Jan 2027: no for the big names, maybe Rutgers/Baruch."},
+
+{id:13,cat:'tech',title:"MS Business / Data Analytics",blurb:"Broadly useful outside tech-only hiring cycles.",ease:3,
+ schools:[
+  {n:"MIT Master of Business Analytics",t:"R",r:"~5-8%",jan:false},
+  {n:"UC Berkeley MEng/MIDS Analytics",t:"R",r:"~15%",jan:false},
+  {n:"UT Austin MS Business Analytics",t:"T",r:"~20%",jan:false},
+  {n:"Georgia Tech MS Analytics (on-campus)",t:"T",r:"~30%",jan:false},
+  {n:"Indiana Kelley MSBA",t:"T",r:"~35%",jan:false},
+  {n:"ASU MS Business Analytics",t:"S",r:"~60%",jan:true},
+  {n:"UT Dallas MS Business Analytics",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at ASU and UT Dallas online tracks."},
+
+{id:14,cat:'tech',title:"MS Cloud Computing",blurb:"Direct extension of your Azure/DevOps experience.",ease:5,
+ schools:[
+  {n:"Georgia Tech MS CS (Cloud/Distributed)",t:"R",r:"~15%",jan:false},
+  {n:"Carnegie Mellon MSIT-Cloud Computing",t:"R",r:"~20%",jan:false},
+  {n:"Northeastern MS Cloud Computing",t:"T",r:"~50%",jan:true},
+  {n:"Illinois Tech MS Cloud Computing",t:"T",r:"~60%",jan:true},
+  {n:"Boston University MSCS (Cloud track)",t:"T",r:"~30%",jan:true},
+  {n:"University of Maryland MS Cloud Computing",t:"S",r:"~40%",jan:true},
+  {n:"Drexel MS Cloud Computing",t:"S",r:"~60%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Northeastern, Illinois Tech, BU, Maryland, Drexel — most run Fall + Spring at minimum."},
+
+{id:15,cat:'tech',title:"MS/MFA Interaction Design",blurb:"Portfolio matters way more than the degree.",ease:2,
+ schools:[
+  {n:"Carnegie Mellon MDes",t:"R",r:"~15%",jan:false},
+  {n:"Parsons MFA Design and Technology",t:"R",r:"~25%",jan:false},
+  {n:"University of Michigan MS Design Science",t:"T",r:"~30%",jan:false},
+  {n:"Pratt Institute MS Comm Design",t:"T",r:"~40%",jan:false},
+  {n:"California College of the Arts MDes",t:"T",r:"~35%",jan:false},
+  {n:"DePaul MS HCI (Design track)",t:"S",r:"~60%",jan:true},
+  {n:"Academy of Art University MFA",t:"S",r:"~70%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at DePaul (quarter system) and Academy of Art (rolling-style)."},
+
+{id:16,cat:'nontech',title:"MBA",blurb:"Top-15 or the ROI math gets shaky fast.",ease:3,
+ schools:[
+  {n:"Stanford GSB",t:"R",r:"~6-7%",jan:false},
+  {n:"Harvard Business School",t:"R",r:"~10-12%",jan:false},
+  {n:"UC Berkeley Haas",t:"T",r:"~12-14%",jan:false},
+  {n:"University of Michigan Ross",t:"T",r:"~25%",jan:false},
+  {n:"UW Foster",t:"T",r:"~30%",jan:true},
+  {n:"Arizona State W.P. Carey",t:"S",r:"~70%+",jan:true},
+  {n:"Indiana Kelley MBA",t:"S",r:"~50%",jan:true}],
+ start:"Sept 2027 for all full-time cohorts. Jan 2027 at UW Foster evening MBA, ASU online, Kelley flexible formats."},
+
+{id:17,cat:'nontech',title:"Master of Public Policy (MPP)",blurb:"Fewer competitors, but government moves slow.",ease:3,
+ schools:[
+  {n:"Harvard Kennedy School",t:"R",r:"~15-18%",jan:false},
+  {n:"Princeton SPIA",t:"R",r:"~12%",jan:false},
+  {n:"UW Evans School",t:"T",r:"~40%",jan:false},
+  {n:"Georgetown McCourt School",t:"T",r:"~35%",jan:false},
+  {n:"UC Berkeley Goldman School",t:"T",r:"~25%",jan:false},
+  {n:"American University MPP",t:"S",r:"~60%",jan:true},
+  {n:"Indiana O'Neill School",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at American University and Indiana O'Neill."},
+
+{id:18,cat:'nontech',title:"Master of Public Administration (MPA)",blurb:"Same deal as MPP — steadier, slower, smaller paychecks.",ease:3,
+ schools:[
+  {n:"Harvard Kennedy School (MPA)",t:"R",r:"~15%",jan:false},
+  {n:"Princeton SPIA (MPA)",t:"R",r:"~12%",jan:false},
+  {n:"Syracuse Maxwell School",t:"T",r:"~40%",jan:false},
+  {n:"UW Evans School (MPA)",t:"T",r:"~40%",jan:false},
+  {n:"Columbia SIPA",t:"T",r:"~20%",jan:false},
+  {n:"Portland State MPA",t:"S",r:"~70%",jan:true},
+  {n:"University of Nebraska Omaha MPA",t:"S",r:"~75%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Portland State (quarter system) and Nebraska Omaha; Syracuse's Executive track maybe."},
+
+{id:19,cat:'nontech',title:"Master of International Affairs / IR",blurb:"Notoriously network-dependent without a specialty.",ease:2,
+ schools:[
+  {n:"Columbia SIPA",t:"R",r:"~20%",jan:false},
+  {n:"Johns Hopkins SAIS",t:"R",r:"~30%",jan:false},
+  {n:"Georgetown MSFS",t:"T",r:"~25%",jan:false},
+  {n:"George Washington Elliott School",t:"T",r:"~40%",jan:true},
+  {n:"Tufts Fletcher School",t:"T",r:"~30%",jan:false},
+  {n:"American University SIS",t:"S",r:"~60%",jan:true},
+  {n:"University of Denver Korbel School",t:"S",r:"~65%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at GW, plus American University and Denver."},
+
+{id:20,cat:'nontech',title:"MS Environmental Mgmt / Sustainability",blurb:"Growing field, and your CS background stands out here.",ease:5,
+ schools:[
+  {n:"Yale School of the Environment",t:"R",r:"~15%",jan:false},
+  {n:"Columbia Climate School",t:"R",r:"~20%",jan:false},
+  {n:"Duke Nicholas School (MEM)",t:"T",r:"~25%",jan:false},
+  {n:"University of Michigan SEAS",t:"T",r:"~30%",jan:false},
+  {n:"UC Santa Barbara Bren School",t:"T",r:"~35%",jan:false},
+  {n:"Arizona State MS Sustainability",t:"S",r:"~60%",jan:true},
+  {n:"University of Vermont MS ENR",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at ASU online; Vermont maybe — verify."},
+
+{id:21,cat:'nontech',title:"Master of Social Work (MSW)",blurb:"The easiest job search on this entire list. By far.",ease:5,
+ schools:[
+  {n:"University of Michigan MSW",t:"R",r:"~15% ✓",jan:true,sourced:true},
+  {n:"UC Berkeley MSW",t:"R",r:"~20%",jan:false},
+  {n:"University of Washington MSW",t:"T",r:"~30%",jan:false},
+  {n:"Boston University MSW",t:"T",r:"~40%",jan:true},
+  {n:"Columbia MSW",t:"T",r:"~40%",jan:false},
+  {n:"Portland State MSW",t:"S",r:"~75-85%",jan:true},
+  {n:"Wayne State MSW",t:"S",r:"~70%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Michigan's advanced-standing/online, BU online, Wayne State, maybe Portland State."},
+
+{id:22,cat:'nontech',title:"MS/MA Learning Design & Tech (EdTech)",blurb:"Edtech never fully recovered from its pandemic bust.",ease:2,
+ schools:[
+  {n:"Stanford Learning, Design & Tech",t:"R",r:"~10%",jan:false},
+  {n:"Vanderbilt Peabody Learning & Design",t:"R",r:"~20%",jan:false},
+  {n:"Harvard TIE",t:"T",r:"~25%",jan:false},
+  {n:"Columbia TC Instructional Tech",t:"T",r:"~40%",jan:true},
+  {n:"University of Michigan Learning Tech",t:"T",r:"~35%",jan:false},
+  {n:"Purdue Learning Design & Technology",t:"S",r:"~50%",jan:true},
+  {n:"Boise State Educational Technology",t:"S",r:"~65%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at Columbia TC, plus Purdue and Boise State online."},
+
+{id:23,cat:'nontech',title:"MFA Creative Writing",blurb:"There's basically no 'job market' concept here.",ease:1,
+ schools:[
+  {n:"Iowa Writers' Workshop",t:"R",r:"2.7-3.7% ✓",jan:false,sourced:true},
+  {n:"UT Austin Michener Center",t:"R",r:"~1-1.5% ✓",jan:false,sourced:true},
+  {n:"Michigan Helen Zell Writers' Program",t:"T",r:"~2-3%",jan:false},
+  {n:"Cornell MFA",t:"T",r:"~2% ✓",jan:false,sourced:true},
+  {n:"Brown Literary Arts MFA",t:"T",r:"~3%",jan:false},
+  {n:"Warren Wilson (low-residency)",t:"S",r:"~30-40%",jan:true},
+  {n:"Bennington Writing Seminars",t:"S",r:"~40%",jan:true}],
+ start:"Sept 2027 for the 5 full-residency programs (all Fall-only, one cohort a year). Low-residency programs (Warren Wilson, Bennington) run two intakes a year, so Jan-ish is possible there."},
+
+{id:24,cat:'nontech',title:"MA Communication, Media, or Journalism",blurb:"Traditional journalism is shrinking. Tech comms isn't.",ease:2,
+ schools:[
+  {n:"Columbia Journalism School",t:"R",r:"~30%",jan:true},
+  {n:"NYU Carter Journalism Institute",t:"R",r:"~30%",jan:false},
+  {n:"Northwestern Medill",t:"T",r:"~35%",jan:true},
+  {n:"University of Michigan MA Comm",t:"T",r:"~30%",jan:false},
+  {n:"USC Annenberg",t:"T",r:"~35%",jan:false},
+  {n:"University of Oregon MA Journalism",t:"S",r:"~60%",jan:false},
+  {n:"Syracuse Newhouse MA",t:"S",r:"~55%",jan:false}],
+ start:"Sept 2027 everywhere. Jan 2027 possibly at Columbia's MS track and Medill's MSJ — both have run multiple entry points historically."},
+
+{id:25,cat:'nontech',title:"Master of Urban Planning",blurb:"Public sector: less crowded, less paid.",ease:3,
+ schools:[
+  {n:"MIT Master in City Planning",t:"R",r:"~20%",jan:false},
+  {n:"Harvard GSD Urban Planning",t:"R",r:"~25%",jan:false},
+  {n:"UC Berkeley MCP",t:"T",r:"~25%",jan:false},
+  {n:"University of Michigan Urban Planning",t:"T",r:"~30%",jan:false},
+  {n:"UW MUP",t:"T",r:"~35%",jan:false},
+  {n:"Portland State Urban Studies",t:"S",r:"~70%",jan:true},
+  {n:"UT Arlington MUP",t:"S",r:"~65%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Portland State (quarter system) and maybe UT Arlington."},
+
+{id:26,cat:'nontech',title:"MS Supply Chain Management",blurb:"Unglamorous, steady, and genuinely under-saturated.",ease:5,
+ schools:[
+  {n:"MIT Center for Transp. & Logistics",t:"R",r:"~15%",jan:false},
+  {n:"Carnegie Mellon MS Supply Chain (Heinz)",t:"R",r:"~25%",jan:true},
+  {n:"Michigan State Broad College",t:"T",r:"~40%",jan:false},
+  {n:"Penn State Smeal SCM",t:"T",r:"~40%",jan:true},
+  {n:"Arizona State W.P. Carey SCM",t:"T",r:"~50%",jan:true},
+  {n:"University of Tennessee Haslam SCM",t:"S",r:"~60%",jan:false},
+  {n:"Ohio State Fisher SCM",t:"S",r:"~55%",jan:false}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at CMU Heinz, plus Penn State World Campus and ASU online."},
+
+{id:27,cat:'nontech',title:"MS Marketing Analytics",blurb:"The 'analytics' framing plays to your strengths.",ease:3,
+ schools:[
+  {n:"Northwestern MS Marketing Analytics",t:"R",r:"~20%",jan:false},
+  {n:"Columbia MS Marketing Science",t:"R",r:"~20%",jan:false},
+  {n:"UT Austin MS Marketing (Data track)",t:"T",r:"~30%",jan:false},
+  {n:"University of Michigan MS Marketing",t:"T",r:"~30%",jan:false},
+  {n:"University of Wisconsin MSMA",t:"T",r:"~40%",jan:true},
+  {n:"Southern Methodist University MS Mktg",t:"S",r:"~55%",jan:true},
+  {n:"University of Alabama MSMA",t:"S",r:"~65%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Wisconsin online, SMU, Alabama."},
+
+{id:28,cat:'nontech',title:"Master of Nonprofit Management",blurb:"Easy to get hired. Hard to get paid well.",ease:4,
+ schools:[
+  {n:"University of Michigan MS Nonprofit Mgmt",t:"R",r:"~35-40%",jan:false},
+  {n:"Columbia MS Nonprofit Management",t:"R",r:"~30%",jan:false},
+  {n:"Case Western MS Nonprofit Orgs",t:"T",r:"~50%",jan:true},
+  {n:"Seattle University Nonprofit Leadership",t:"T",r:"~60%",jan:true},
+  {n:"University of San Francisco Nonprofit Admin",t:"T",r:"~65%",jan:true},
+  {n:"Regis University Nonprofit Management",t:"S",r:"~75%",jan:true},
+  {n:"Northeastern MS Nonprofit Management",t:"S",r:"~70%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 at Case Western, Seattle U, USF, Regis, Northeastern — this whole category skews flexible."},
+
+{id:29,cat:'nontech',title:"MS Law / Legal Studies (non-JD)",blurb:"AI regulation is outgrowing the talent pool.",ease:4,
+ schools:[
+  {n:"Georgetown MSLS (Tech Law & Policy)",t:"R",r:"~25-30%",jan:true},
+  {n:"Northwestern MS in Law",t:"R",r:"~35%",jan:true},
+  {n:"UC Berkeley Master of Legal Studies",t:"T",r:"~30%",jan:false},
+  {n:"Arizona State MLS",t:"T",r:"~50%",jan:true},
+  {n:"Wake Forest MSL",t:"T",r:"~55%",jan:false},
+  {n:"University of Denver MLS",t:"S",r:"~65%",jan:true},
+  {n:"Cleveland State MLS",t:"S",r:"~75%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at Georgetown exec track and Northwestern, plus ASU, Denver, Cleveland State."},
+
+{id:30,cat:'nontech',title:"Master of Engineering Management (MEM)",blurb:"Great long game, tight market right this second.",ease:2,
+ schools:[
+  {n:"Northwestern MEM",t:"R",r:"~30%",jan:false},
+  {n:"UC Berkeley Fung Institute MEng",t:"R",r:"~20%",jan:false},
+  {n:"Duke MEM",t:"T",r:"~35%",jan:false},
+  {n:"Dartmouth MEM (Thayer)",t:"T",r:"~30%",jan:false},
+  {n:"Cornell MEM",t:"T",r:"~30%",jan:false},
+  {n:"Santa Clara MS Eng Management",t:"S",r:"~60%",jan:true},
+  {n:"USC MS Eng Management",t:"S",r:"~55%",jan:true}],
+ start:"Sept 2027 everywhere. Jan 2027 maybe at Northwestern, plus Santa Clara and USC (both part-time-friendly)."}
+];
+
+const EASE_LABELS = {1:"Much harder",2:"Harder",3:"About the same",4:"Somewhat easier",5:"Much easier"};
+const EASE_COLORS = {1:"var(--reach)",2:"var(--reach)",3:"var(--target)",4:"var(--safety)",5:"var(--safety)"};
+
+let state = { cat: 'all', sort: 'easiest', query: '' };
+
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  let items = PROGRAMS.filter(p => {
+    const matchCat = state.cat === 'all' || p.cat === state.cat;
+    const q = state.query.toLowerCase();
+    const matchQ = !q || p.title.toLowerCase().includes(q) || p.blurb.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  if(state.sort === 'easiest') items.sort((a,b)=>b.ease-a.ease);
+  else if(state.sort === 'hardest') items.sort((a,b)=>a.ease-b.ease);
+  else items.sort((a,b)=>a.title.localeCompare(b.title));
+
+  document.getElementById('countTag').textContent = items.length + (items.length===1?' quest':' quests');
+
+  if(items.length === 0){
+    grid.innerHTML = '<div class="empty-state">No quests match that search. Try something else — "cloud", "MSW", "finance"...</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map(p => {
+    const rCount = p.schools.filter(s=>s.t==='R').length;
+    const tCount = p.schools.filter(s=>s.t==='T').length;
+    const sCount = p.schools.filter(s=>s.t==='S').length;
+    const dots = '<span class="dot R"></span>'.repeat(rCount) + '<span class="dot T"></span>'.repeat(tCount) + '<span class="dot S"></span>'.repeat(sCount);
+    const pct = (p.ease/5)*100;
+    return `
+    <div class="card" tabindex="0" role="button" data-id="${p.id}" aria-label="View ${p.title} details">
+      <div class="card-top">
+        <span class="cat-chip ${p.cat}">${p.cat === 'tech' ? 'Tech' : 'Non-Tech'}</span>
+        <div class="tier-dots">${dots}</div>
+      </div>
+      <h3>${p.title}</h3>
+      <p class="blurb">${p.blurb}</p>
+      <div class="power-row">
+        <div class="power-label"><span>Job ease vs. now</span><span>${EASE_LABELS[p.ease]}</span></div>
+        <div class="power-bar">
+          <div class="power-fill" style="width:${pct}%; background:${EASE_COLORS[p.ease]};"></div>
+          <div class="power-baseline"></div>
+        </div>
+      </div>
+      <div class="expand-hint">tap to see all 7 schools →</div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => openModal(parseInt(card.dataset.id)));
+    card.addEventListener('keydown', (e) => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openModal(parseInt(card.dataset.id)); } });
+  });
+}
+
+function openModal(id){
+  const p = PROGRAMS.find(x=>x.id===id);
+  const modal = document.getElementById('modal');
+  const overlay = document.getElementById('overlay');
+  modal.innerHTML = `
+    <div class="modal-head">
+      <h2>${p.title}</h2>
+      <button class="close-btn" id="closeBtn" aria-label="Close">✕</button>
+    </div>
+    <p class="modal-blurb"><strong>Job ease vs. now:</strong> ${p.blurb} (${EASE_LABELS[p.ease]})</p>
+    <div class="start-note"><b>Start dates</b><br>${p.start}</div>
+    <div class="school-list">
+      ${p.schools.map(s => `
+        <div class="school-row">
+          <div class="tier-badge ${s.t}">${s.t}</div>
+          <div class="school-name">${s.n}</div>
+          <div class="school-rate ${s.sourced ? 'sourced' : ''}">${s.r}${s.jan ? ' · Jan ok' : ''}</div>
+        </div>`).join('')}
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') closeModal(); });
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+
+document.getElementById('catSeg').addEventListener('click', (e) => {
+  if(e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#catSeg button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.cat = e.target.dataset.cat;
+  renderGrid();
+});
+document.getElementById('sortSel').addEventListener('change', (e) => { state.sort = e.target.value; renderGrid(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { state.query = e.target.value; renderGrid(); });
+
+renderGrid();
+</script>
+</body>
+</html>
