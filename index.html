@@ -735,7 +735,8 @@ onAuthStateChanged(auth, async (user) => {
       pendingToggleId = null;
     }
   } else {
-    ruledOut = new Set(JSON.parse(localStorage.getItem(RULED_KEY) || '[]'));
+    ruledOut = new Set();
+    localStorage.removeItem(RULED_KEY);
     renderGrid();
   }
 });
