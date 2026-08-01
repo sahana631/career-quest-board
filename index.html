@@ -158,7 +158,26 @@
     font-family: var(--mono); font-size: 8px; color: var(--text-dim); white-space:nowrap;
   }
 
-  .expand-hint{ font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align:center; padding-top: 4px; border-top: 1px dashed var(--line); }
+  .card-footer{ display:flex; align-items:center; justify-content:space-between; gap: 10px; padding-top: 6px; border-top: 1px dashed var(--line); }
+  .expand-hint{ font-family: var(--mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+  .ruleout-btn{
+    font-family: var(--mono); font-size: 10px; background: var(--bg-deep); border: 1px solid var(--line);
+    color: var(--text-dim); padding: 5px 9px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; transition: all .15s ease;
+  }
+  .ruleout-btn:hover{ border-color: var(--reach); color: var(--reach); }
+  .card.ruled-out{ opacity: 0.55; }
+  .card.ruled-out:hover{ opacity: 0.85; }
+  .card.ruled-out h3{ text-decoration: line-through; color: var(--text-dim); }
+  .card.ruled-out .ruleout-btn{ border-color: var(--safety); color: var(--safety); }
+
+  .ruled-toggle{
+    font-family: var(--mono); font-size: 12px; color: var(--text-mute); background: var(--bg-deep);
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    white-space: nowrap; transition: all .15s ease;
+  }
+  .ruled-toggle:hover{ color: var(--text); }
+  .ruled-toggle.active{ border-color: var(--violet); color: var(--violet-glow); background: rgba(140,124,255,0.12); }
 
   /* MODAL */
   .overlay{
@@ -255,6 +274,7 @@
       <option value="hardest">Sort: Hardest job hunt first</option>
       <option value="az">Sort: A → Z</option>
     </select>
+    <button class="ruled-toggle" id="ruledToggle" aria-pressed="false">Ruled out (0)</button>
     <span class="count-tag" id="countTag">30 quests</span>
   </div>
 
@@ -606,7 +626,16 @@ const PROGRAMS = [
 const EASE_LABELS = {1:"Much harder",2:"Harder",3:"About the same",4:"Somewhat easier",5:"Much easier"};
 const EASE_COLORS = {1:"var(--reach)",2:"var(--reach)",3:"var(--target)",4:"var(--safety)",5:"var(--safety)"};
 
-let state = { cat: 'all', sort: 'easiest', query: '' };
+let state = { cat: 'all', sort: 'easiest', query: '', showRuledOut: false };
+
+const RULED_KEY = 'cqb_ruled_out';
+let ruledOut = new Set(JSON.parse(localStorage.getItem(RULED_KEY) || '[]'));
+function saveRuledOut(){ localStorage.setItem(RULED_KEY, JSON.stringify([...ruledOut])); }
+function toggleRuleOut(id){
+  if(ruledOut.has(id)) ruledOut.delete(id); else ruledOut.add(id);
+  saveRuledOut();
+  renderGrid();
+}
 
 function renderGrid(){
   const grid = document.getElementById('grid');
@@ -614,13 +643,20 @@ function renderGrid(){
     const matchCat = state.cat === 'all' || p.cat === state.cat;
     const q = state.query.toLowerCase();
     const matchQ = !q || p.title.toLowerCase().includes(q) || p.blurb.toLowerCase().includes(q);
-    return matchCat && matchQ;
+    const matchRuled = state.showRuledOut || !ruledOut.has(p.id);
+    return matchCat && matchQ && matchRuled;
   });
   if(state.sort === 'easiest') items.sort((a,b)=>b.ease-a.ease);
   else if(state.sort === 'hardest') items.sort((a,b)=>a.ease-b.ease);
   else items.sort((a,b)=>a.title.localeCompare(b.title));
 
   document.getElementById('countTag').textContent = items.length + (items.length===1?' quest':' quests');
+
+  const ruledCount = PROGRAMS.filter(p=>ruledOut.has(p.id)).length;
+  const ruledToggle = document.getElementById('ruledToggle');
+  ruledToggle.textContent = `Ruled out (${ruledCount})`;
+  ruledToggle.classList.toggle('active', state.showRuledOut);
+  ruledToggle.setAttribute('aria-pressed', state.showRuledOut);
 
   if(items.length === 0){
     grid.innerHTML = '<div class="empty-state">No quests match that search. Try something else — "cloud", "MSW", "finance"...</div>';
@@ -633,8 +669,9 @@ function renderGrid(){
     const sCount = p.schools.filter(s=>s.t==='S').length;
     const dots = '<span class="dot R"></span>'.repeat(rCount) + '<span class="dot T"></span>'.repeat(tCount) + '<span class="dot S"></span>'.repeat(sCount);
     const pct = (p.ease/5)*100;
+    const isRuled = ruledOut.has(p.id);
     return `
-    <div class="card" tabindex="0" role="button" data-id="${p.id}" aria-label="View ${p.title} details">
+    <div class="card ${isRuled ? 'ruled-out' : ''}" tabindex="0" role="button" data-id="${p.id}" aria-label="View ${p.title} details">
       <div class="card-top">
         <span class="cat-chip ${p.cat}">${p.cat === 'tech' ? 'Tech' : 'Non-Tech'}</span>
         <div class="tier-dots">${dots}</div>
@@ -648,13 +685,22 @@ function renderGrid(){
           <div class="power-baseline"></div>
         </div>
       </div>
-      <div class="expand-hint">tap to see all 7 schools →</div>
+      <div class="card-footer">
+        <div class="expand-hint">tap to see all 7 schools →</div>
+        <button class="ruleout-btn" data-ruleout-id="${p.id}">${isRuled ? '↺ Restore' : '✕ Rule out'}</button>
+      </div>
     </div>`;
   }).join('');
 
   grid.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', () => openModal(parseInt(card.dataset.id)));
     card.addEventListener('keydown', (e) => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openModal(parseInt(card.dataset.id)); } });
+  });
+  grid.querySelectorAll('.ruleout-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleRuleOut(parseInt(btn.dataset.ruleoutId));
+    });
   });
 }
 
@@ -665,7 +711,10 @@ function openModal(id){
   modal.innerHTML = `
     <div class="modal-head">
       <h2>${p.title}</h2>
-      <button class="close-btn" id="closeBtn" aria-label="Close">✕</button>
+      <div style="display:flex; gap:8px; flex-shrink:0;">
+        <button class="ruleout-btn" id="modalRuleoutBtn" data-ruleout-id="${p.id}">${ruledOut.has(id) ? '↺ Restore' : '✕ Rule out'}</button>
+        <button class="close-btn" id="closeBtn" aria-label="Close">✕</button>
+      </div>
     </div>
     <p class="modal-blurb"><strong>Job ease vs. now:</strong> ${p.blurb} (${EASE_LABELS[p.ease]})</p>
     <div class="start-note"><b>Start dates</b><br>${p.start}</div>
@@ -680,6 +729,10 @@ function openModal(id){
   `;
   overlay.classList.add('open');
   document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('modalRuleoutBtn').addEventListener('click', () => {
+    toggleRuleOut(id);
+    document.getElementById('modalRuleoutBtn').textContent = ruledOut.has(id) ? '↺ Restore' : '✕ Rule out';
+  });
   document.body.style.overflow = 'hidden';
 }
 function closeModal(){
@@ -698,6 +751,7 @@ document.getElementById('catSeg').addEventListener('click', (e) => {
 });
 document.getElementById('sortSel').addEventListener('change', (e) => { state.sort = e.target.value; renderGrid(); });
 document.getElementById('searchInput').addEventListener('input', (e) => { state.query = e.target.value; renderGrid(); });
+document.getElementById('ruledToggle').addEventListener('click', () => { state.showRuledOut = !state.showRuledOut; renderGrid(); });
 
 renderGrid();
 </script>
