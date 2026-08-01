@@ -179,6 +179,21 @@
   .ruled-toggle:hover{ color: var(--text); }
   .ruled-toggle.active{ border-color: var(--violet); color: var(--violet-glow); background: rgba(140,124,255,0.12); }
 
+  .auth-box{ display:flex; align-items:center; }
+  .signin-btn{
+    font-family: var(--mono); font-size: 12px; background: var(--violet); color: #0e0c1a; border: none;
+    border-radius: 10px; padding: 9px 14px; cursor: pointer; font-weight: 600; white-space: nowrap;
+  }
+  .signin-btn:hover{ background: var(--violet-glow); }
+  .user-chip{ display:flex; align-items:center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--text-mute); }
+  .user-chip img{ width: 22px; height: 22px; border-radius: 50%; }
+  .signout-btn{
+    font-family: var(--mono); font-size: 11px; background: var(--bg-deep); border: 1px solid var(--line);
+    color: var(--text-dim); border-radius: 8px; padding: 5px 9px; cursor: pointer;
+  }
+  .signout-btn:hover{ color: var(--reach); border-color: var(--reach); }
+  .sync-note{ font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+
   /* MODAL */
   .overlay{
     position: fixed; inset:0; background: rgba(5,4,10,0.82); backdrop-filter: blur(4px);
@@ -276,6 +291,7 @@
     </select>
     <button class="ruled-toggle" id="ruledToggle" aria-pressed="false">Ruled out (0)</button>
     <span class="count-tag" id="countTag">30 quests</span>
+    <div class="auth-box" id="authBox"></div>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -290,7 +306,27 @@
   <div class="modal" id="modal"></div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBsCujDIQ58R0VMrKfTlQ-IPZ_AWrWlNjI",
+  authDomain: "career-quest-board.firebaseapp.com",
+  projectId: "career-quest-board",
+  storageBucket: "career-quest-board.firebasestorage.app",
+  messagingSenderId: "6912997589",
+  appId: "1:6912997589:web:d3f287f755f00355c58a5c"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const googleProvider = new GoogleAuthProvider();
+
+let currentUser = null;
+let pendingToggleId = null;
+
 const PROGRAMS = [
 {id:1,cat:'tech',title:"MS Computer Science",blurb:"Same generalist grind, better alumni network.",ease:3,
  schools:[
@@ -630,12 +666,79 @@ let state = { cat: 'all', sort: 'easiest', query: '', showRuledOut: false };
 
 const RULED_KEY = 'cqb_ruled_out';
 let ruledOut = new Set(JSON.parse(localStorage.getItem(RULED_KEY) || '[]'));
+let openModalId = null;
 function saveRuledOut(){ localStorage.setItem(RULED_KEY, JSON.stringify([...ruledOut])); }
-function toggleRuleOut(id){
+
+async function loadRuledOutFromCloud(uid){
+  try{
+    const snap = await getDoc(doc(db, 'users', uid));
+    if(snap.exists() && Array.isArray(snap.data().ruledOut)){
+      ruledOut = new Set(snap.data().ruledOut);
+      saveRuledOut();
+    }
+  } catch(err){ console.error('Failed to load saved picks from the cloud:', err); }
+  renderGrid();
+  if(openModalId !== null) openModal(openModalId);
+}
+
+async function saveRuledOutToCloud(){
+  if(!currentUser) return;
+  try{
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      ruledOut: [...ruledOut], email: currentUser.email, updatedAt: Date.now()
+    }, { merge: true });
+  } catch(err){ console.error('Failed to save picks to the cloud:', err); }
+}
+
+function applyToggle(id){
   if(ruledOut.has(id)) ruledOut.delete(id); else ruledOut.add(id);
   saveRuledOut();
+  saveRuledOutToCloud();
   renderGrid();
+  if(openModalId === id) openModal(id);
 }
+
+function toggleRuleOut(id){
+  if(!currentUser){
+    pendingToggleId = id;
+    signInWithPopup(auth, googleProvider).catch(err => {
+      console.error('Sign-in failed:', err);
+      pendingToggleId = null;
+    });
+    return;
+  }
+  applyToggle(id);
+}
+
+function renderAuthBox(){
+  const box = document.getElementById('authBox');
+  if(currentUser){
+    const photo = currentUser.photoURL ? `<img src="${currentUser.photoURL}" alt="">` : '';
+    const name = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email;
+    box.innerHTML = `<div class="user-chip">${photo}<span>${name} · synced</span><button class="signout-btn" id="signOutBtn">Sign out</button></div>`;
+    document.getElementById('signOutBtn').addEventListener('click', () => signOut(auth));
+  } else {
+    box.innerHTML = `<button class="signin-btn" id="signInBtn">Sign in with Google to save picks</button>`;
+    document.getElementById('signInBtn').addEventListener('click', () => {
+      signInWithPopup(auth, googleProvider).catch(err => console.error('Sign-in failed:', err));
+    });
+  }
+}
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  renderAuthBox();
+  if(user){
+    await loadRuledOutFromCloud(user.uid);
+    if(pendingToggleId !== null){
+      applyToggle(pendingToggleId);
+      pendingToggleId = null;
+    }
+  } else {
+    ruledOut = new Set(JSON.parse(localStorage.getItem(RULED_KEY) || '[]'));
+    renderGrid();
+  }
+});
 
 function renderGrid(){
   const grid = document.getElementById('grid');
@@ -705,6 +808,7 @@ function renderGrid(){
 }
 
 function openModal(id){
+  openModalId = id;
   const p = PROGRAMS.find(x=>x.id===id);
   const modal = document.getElementById('modal');
   const overlay = document.getElementById('overlay');
@@ -729,13 +833,11 @@ function openModal(id){
   `;
   overlay.classList.add('open');
   document.getElementById('closeBtn').addEventListener('click', closeModal);
-  document.getElementById('modalRuleoutBtn').addEventListener('click', () => {
-    toggleRuleOut(id);
-    document.getElementById('modalRuleoutBtn').textContent = ruledOut.has(id) ? '↺ Restore' : '✕ Rule out';
-  });
+  document.getElementById('modalRuleoutBtn').addEventListener('click', () => toggleRuleOut(id));
   document.body.style.overflow = 'hidden';
 }
 function closeModal(){
+  openModalId = null;
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
